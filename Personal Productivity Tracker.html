@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Productivity Tracker</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+    font-family:'Segoe UI';
+    color:white;
+    transition:0.3s;
+}
+
+/* THEMES */
+body.default{background:linear-gradient(135deg,#667eea,#764ba2);}
+body.dark{background:#121212;}
+body.sunset{background:linear-gradient(135deg,#ff512f,#dd2476);}
+body.ocean{background:linear-gradient(135deg,#00c6ff,#0072ff);}
+
+/* HEADER */
+header{text-align:center;padding:15px;}
+#clock{margin:5px 0;font-size:14px;}
+
+/* NAV */
+nav{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:10px;
+}
+nav button{
+    padding:10px;
+    border:none;
+    border-radius:20px;
+    background:rgba(255,255,255,0.2);
+    color:white;
+    cursor:pointer;
+    transition:0.2s;
+}
+nav button:hover{
+    background:rgba(255,255,255,0.4);
+}
+
+/* PAGE */
+.page{display:none;padding:15px;}
+.active{display:block;}
+
+.card{
+    background:rgba(255,255,255,0.15);
+    padding:15px;
+    border-radius:15px;
+    margin:auto;
+    max-width:500px;
+}
+
+/* INPUT */
+input,textarea,select{
+    width:100%;
+    padding:8px;
+    margin:5px 0;
+    border-radius:10px;
+    border:none;
+}
+
+/* BUTTON */
+button.action{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#00c6ff;
+    color:white;
+    cursor:pointer;
+    transition:0.2s;
+}
+button.action:hover{
+    transform:scale(1.05);
+}
+
+/* LIST */
+ul{list-style:none;}
+li{
+    background:rgba(255,255,255,0.3);
+    margin:5px 0;
+    padding:8px;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* PROGRESS */
+.progress{background:#ddd;height:15px;border-radius:10px;}
+.progress-bar{height:15px;background:#00ffcc;width:0%;}
+
+/* MOBILE */
+@media(max-width:600px){
+.card{margin:10px;}
+}
+</style>
+</head>
+
+<body class="default">
+
+<header>
+<h1 style="letter-spacing:1px;">📊 PERSONAL PRODUCTIVITY TRACKER</h1>
+<div id="clock"></div>
+
+<select id="themeSelect">
+<option value="default">🌈 Default</option>
+<option value="dark">🌙 Dark</option>
+<option value="sunset">🌅 Sunset</option>
+<option value="ocean">🌊 Ocean</option>
+</select>
+</header>
+
+<nav>
+<button onclick="showPage('dashboard')">Dashboard</button>
+<button onclick="showPage('tasks')">Tasks</button>
+<button onclick="showPage('habits')">Habits</button>
+<button onclick="showPage('notes')">Notes</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="page active">
+<div class="card">
+<h2>📊 Overview</h2>
+<p id="stats"></p>
+<div class="progress">
+<div id="progressBar" class="progress-bar"></div>
+</div>
+</div>
+</div>
+
+<!-- TASKS -->
+<div id="tasks" class="page">
+<div class="card">
+<h2>✅ Tasks</h2>
+<input id="taskInput" placeholder="Add task">
+<button class="action" onclick="addTask()">Add Task</button>
+<ul id="taskList"></ul>
+</div>
+</div>
+
+<!-- HABITS -->
+<div id="habits" class="page">
+<div class="card">
+<h2>🔥 Habits</h2>
+<input id="habitInput" placeholder="Add habit">
+<button class="action" onclick="addHabit()">Add Habit</button>
+<ul id="habitList"></ul>
+</div>
+</div>
+
+<!-- NOTES -->
+<div id="notes" class="page">
+<div class="card">
+<h2>📝 Notes</h2>
+
+<select id="noteCategory">
+<option>📚 Study</option>
+<option>💡 Ideas</option>
+<option>🎯 Goals</option>
+</select>
+
+<textarea id="noteBox"></textarea>
+<button class="action" onclick="addNote()">Save Note</button>
+
+<ul id="noteList"></ul>
+</div>
+</div>
+
+<script>
+// SAFE STORAGE
+function getData(key){
+try{
+return JSON.parse(localStorage.getItem(key)) || [];
+}catch{
+return [];
+}
+}
+
+let tasks = getData("tasks");
+let habits = getData("habits");
+let notes = getData("notes");
+
+// ELEMENTS
+const taskInput = document.getElementById("taskInput");
+const taskList = document.getElementById("taskList");
+const habitInput = document.getElementById("habitInput");
+const habitList = document.getElementById("habitList");
+const noteBox = document.getElementById("noteBox");
+const noteList = document.getElementById("noteList");
+const noteCategory = document.getElementById("noteCategory");
+const stats = document.getElementById("stats");
+const progressBar = document.getElementById("progressBar");
+const clock = document.getElementById("clock");
+const themeSelect = document.getElementById("themeSelect");
+
+// THEME
+let savedTheme = localStorage.getItem("theme") || "default";
+document.body.className = savedTheme;
+themeSelect.value = savedTheme;
+
+themeSelect.addEventListener("change", function(){
+    document.body.className = this.value;
+    localStorage.setItem("theme", this.value);
+});
+
+// NAV
+function showPage(p){
+document.querySelectorAll(".page").forEach(pg=>pg.classList.remove("active"));
+document.getElementById(p).classList.add("active");
+}
+
+// CLOCK
+setInterval(()=>{
+clock.innerText=new Date().toLocaleTimeString();
+},1000);
+
+// TASKS
+function addTask(){
+let val=taskInput.value.trim();
+if(!val) return;
+tasks.push({text:val,done:false});
+taskInput.value="";
+save(); renderTasks();
+}
+
+function renderTasks(){
+taskList.innerHTML="";
+tasks.forEach((t,i)=>{
+let li=document.createElement("li");
+li.innerHTML=`${i+1}. ${t.text}
+<div>
+<button onclick="toggleTask(${i})">✔</button>
+<button onclick="deleteTask(${i})">❌</button>
+</div>`;
+if(t.done) li.style.textDecoration="line-through";
+taskList.appendChild(li);
+});
+updateStats();
+}
+
+function toggleTask(i){tasks[i].done=!tasks[i].done;save();renderTasks();}
+function deleteTask(i){tasks.splice(i,1);save();renderTasks();}
+
+// HABITS
+function addHabit(){
+let val=habitInput.value.trim();
+if(!val) return;
+habits.push({text:val,streak:0});
+habitInput.value="";
+save(); renderHabits();
+}
+
+function renderHabits(){
+habitList.innerHTML="";
+habits.forEach((h,i)=>{
+let li=document.createElement("li");
+li.innerHTML=`${h.text} (🔥 ${h.streak})
+<button onclick="toggleHabit(${i})">Done</button>`;
+habitList.appendChild(li);
+});
+}
+
+function toggleHabit(i){habits[i].streak++;save();renderHabits();}
+
+// NOTES
+function addNote(){
+let val=noteBox.value.trim();
+if(!val) return;
+
+notes.push({
+text:val,
+category:noteCategory.value,
+date:new Date().toLocaleTimeString(),
+pinned:false
+});
+
+noteBox.value="";
+save(); renderNotes();
+}
+
+function renderNotes(){
+noteList.innerHTML="";
+notes.sort((a,b)=>b.pinned-a.pinned);
+
+notes.forEach((n,i)=>{
+let li=document.createElement("li");
+li.innerHTML=`
+<div>
+<b>${n.category}</b><br>
+${n.text}<br>
+<small>${n.date}</small>
+</div>
+<div>
+<button onclick="pinNote(${i})">📌</button>
+<button onclick="deleteNote(${i})">❌</button>
+</div>`;
+noteList.appendChild(li);
+});
+}
+
+function pinNote(i){notes[i].pinned=!notes[i].pinned;save();renderNotes();}
+function deleteNote(i){notes.splice(i,1);save();renderNotes();}
+
+// SAVE
+function save(){
+localStorage.setItem("tasks",JSON.stringify(tasks));
+localStorage.setItem("habits",JSON.stringify(habits));
+localStorage.setItem("notes",JSON.stringify(notes));
+}
+
+// STATS
+function updateStats(){
+let done=tasks.filter(t=>t.done).length;
+let total=tasks.length;
+let percent=total?(done/total)*100:0;
+
+let msg="";
+if(percent===100 && total>0) msg="🔥 All completed!";
+else if(percent>=50) msg="💪 Good progress!";
+else if(total===0) msg="📝 Add tasks!";
+else msg="🚀 Keep going!";
+
+stats.innerText=`Completed: ${done}/${total} - ${msg}`;
+progressBar.style.width=percent+"%";
+}
+
+// INIT
+renderTasks();
+renderHabits();
+renderNotes();
+updateStats();
+</script>
+
+</body>
+</html>
